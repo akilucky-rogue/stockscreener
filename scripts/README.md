@@ -1,40 +1,72 @@
 # QSDE — operations scripts
 
-PowerShell scripts to start, seed, test, and stop the local stack. Each script is idempotent: re-running is safe and won't double-up data.
+PowerShell scripts to bootstrap, start, seed, test, and stop the local stack. Each script is idempotent: re-running is safe and won't double-up data.
 
 All commands are run from the `qsde/` root directory.
 
-## First-time boot
-
-You did the install (Docker Desktop, Python venv, Node) already. The only first-boot extra step is seeding the database.
+## First-time bootstrap (run ONCE per machine)
 
 ```powershell
 cd C:\Users\NEW\Documents\stockscreener\qsde
-.\scripts\start.ps1 -Seed -Test
+
+# 1. Copy .env template and paste your real (rotated) Kite keys
+copy .env.example .env
+notepad .env
+
+# 2. Bootstrap: venv, deps, Docker, migrations, frontend, Task Scheduler
+.\scripts\setup.ps1
 ```
 
-That single command:
+`setup.ps1` does:
 
-1. Validates that `.venv`, `node`, and `.env` exist.
-2. Starts Docker Desktop if it isn't running.
-3. Brings up TimescaleDB and Redis via `docker compose up -d` and waits for both healthchecks.
-4. Applies any pending migrations under `infra/migrations/` (idempotent — already-applied ones are skipped).
-5. Runs `scripts/seed.ps1` to scrape the Nifty 200 universe, ingest fundamentals and 20-year OHLCV from yfinance, compute the 33 technical factors and persist them PIT-correctly, train both LightGBM models, and generate today's signals.
-6. Launches the FastAPI backend in a new PowerShell window on `http://127.0.0.1:8000` and waits for `/api/health` to return `healthy`.
-7. Launches the Next.js dashboard in a new cmd window on `http://localhost:3000` and waits for it to respond.
-8. Runs `scripts/smoke_test.ps1` against every critical endpoint and prints a PASS/FAIL table.
+1. Creates the Python venv (`.venv/`) if absent and installs backend deps (`pip install -e ".[dev]"`).
+2. Copies `.env.example` → `.env` if `.env` is missing (you fill in the keys).
+3. Starts Docker Desktop if it isn't running; waits up to 90s for daemon.
+4. Brings up TimescaleDB + Redis (`docker compose up -d --wait`) and waits for both healthchecks.
+5. Applies all migrations under `infra/migrations/` in order (idempotent).
+6. Installs frontend deps (`npm install`) unless `-SkipFrontend`.
+7. Registers two Windows Scheduled Tasks unless `-SkipScheduledTasks`:
+   - `QSDE_Daily_EOD` — weekdays 15:45 IST
+   - `QSDE_Weekly_Drift` — Sundays 18:00 IST
+8. Prints a "next steps" summary.
 
-Expect 5–15 minutes total on the first run — yfinance ingestion is the long pole.
+Optional flags:
 
-## Daily startup
+```powershell
+.\scripts\setup.ps1 -SkipFrontend                     # CI / API-only
+.\scripts\setup.ps1 -SkipScheduledTasks               # non-Windows hosts
+.\scripts\setup.ps1 -DriftWebhookUrl "https://..."    # Slack/Discord drift alerts
+```
 
-After the first seed, your data is persisted in Docker volumes. Just:
+## First-time seed (run ONCE after setup)
+
+```powershell
+.\scripts\seed.ps1
+```
+
+Scrapes the Nifty 200/500 universe, ingests 5+ years of daily OHLCV via Kite/yfinance, computes the 120-factor library and persists PIT-correctly to `factor_pit`, trains LightGBM models for all 3 horizons with purged CV + cost-aware target, and generates today's signals. Takes 15–30 minutes.
+
+## Daily launch
 
 ```powershell
 .\scripts\start.ps1
 ```
 
-This skips the seed step but reapplies migrations (no-op if already applied), brings up the stack, and starts both servers. Add `-Test` if you want the smoke tests too.
+This:
+
+1. Validates prerequisites.
+2. Re-applies migrations (no-op if already applied).
+3. Starts FastAPI backend in a new window on `http://127.0.0.1:8000`, waits for `/api/health`.
+4. Launches the Kite live tick streamer in its own window (skipped if no active Kite token).
+5. Starts Next.js frontend on `http://localhost:3000` (omit with `-NoFrontend`).
+6. Runs smoke tests if `-Test`.
+
+After daily Kite re-login, restart just the streamer:
+
+```powershell
+.\scripts\start_live_stream.ps1
+.\scripts\start_live_stream.ps1 -Symbols "RELIANCE,TCS,INFY"   # subset
+```
 
 ## Re-seed (rebuild signals after code change)
 
@@ -73,6 +105,47 @@ Exit code 0 = all pass, non-zero = something broke. Useful before a commit or af
 - `-SkipDocker` — assume containers are already running
 
 Combine freely: `.\scripts\start.ps1 -NoFrontend -Test` brings up only the backend and runs the API portion of the smoke tests.
+
+## Scheduled tasks (Windows Task Scheduler)
+
+Registered by `setup.ps1`. Re-register at any time if you change schedules:
+
+```powershell
+# Daily EOD pipeline (weekdays at 15:45 IST by default)
+powershell -ExecutionPolicy Bypass -File backend\scripts\register_daily_task.ps1
+powershell -ExecutionPolicy Bypass -File backend\scripts\register_daily_task.ps1 -Time "16:00"
+
+# Weekly drift report (Sundays at 18:00 IST by default)
+powershell -ExecutionPolicy Bypass -File backend\scripts\register_weekly_drift_task.ps1
+powershell -ExecutionPolicy Bypass -File backend\scripts\register_weekly_drift_task.ps1 -Webhook "https://hooks.slack.com/..."
+
+# Inspect / trigger / remove
+Get-ScheduledTask -TaskName "QSDE_Daily_EOD"
+Start-ScheduledTask -TaskName "QSDE_Weekly_Drift"
+Unregister-ScheduledTask -TaskName "QSDE_Daily_EOD" -Confirm:$false
+```
+
+Logs land in `backend/logs/daily_eod_*.log` and `backend/logs/weekly_drift_*.log`.
+
+JSON snapshots of weekly drift reports persist to `backend/weekly_reports/drift_YYYY-MM-DD.json`.
+
+## Run things manually when needed
+
+```powershell
+# Run the full EOD pipeline right now (independent of scheduler)
+.\.venv\Scripts\python.exe backend\scripts\daily_eod.py
+.\.venv\Scripts\python.exe backend\scripts\daily_eod.py --skip-ohlcv   # data already fresh
+
+# Print the weekly drift report
+.\.venv\Scripts\python.exe backend\scripts\weekly_drift.py --unicode   # nice glyphs
+.\.venv\Scripts\python.exe backend\scripts\weekly_drift.py --ascii     # PowerShell-safe
+
+# Retrain all 3 horizons on the cost-aware target
+.\.venv\Scripts\python.exe backend\scripts\retrain.py
+
+# Auto-take top model signals across all 3 horizons (idempotent)
+.\.venv\Scripts\python.exe -c "from qsde.execution.auto_taker import take_top_model_signals_all_horizons; import json; print(json.dumps(take_top_model_signals_all_horizons(), indent=2, default=str))"
+```
 
 ## Troubleshooting
 
@@ -120,3 +193,31 @@ If sector is NULL, the comps engine returns "No peers found" early because it fi
 ### Backend reload doesn't pick up code changes
 
 `uvicorn --reload` watches the backend tree but not the frontend or migrations. If you changed Python and saw stale behavior, kill and restart the backend window manually (or run `.\scripts\stop.ps1` then `.\scripts\start.ps1` again).
+
+### Kite token expired (`No active Kite access_token in DB`)
+
+Zerodha access tokens expire daily at ~06:00 IST. After expiry, the daily EOD step 1 skips OHLCV refresh (other steps continue on existing data) and `start_live_stream.ps1` exits with the login URL printed. Re-login:
+
+1. Open `http://127.0.0.1:8000/api/kite/login_url` in a browser, complete the Zerodha OAuth.
+2. Restart the streamer: `.\scripts\start_live_stream.ps1`.
+
+The daily EOD scheduled task tolerates an expired token — it logs the skip and proceeds; signals stay fresh on the existing OHLCV.
+
+### Live chart shows "only N bars"
+
+The live streamer hasn't accumulated enough minute bars yet. Wait until ~10 bars (10 minutes after market open at 09:15 IST). The chart auto-swaps from "1M historical context" to live view once the threshold is hit.
+
+### Weekly drift script crashes with `UnicodeEncodeError`
+
+The Task Scheduler wrapper passes `--ascii` automatically so this can't happen in scheduled runs. If you hit it interactively in a vanilla cmd.exe, either:
+- Add `--unicode` if your terminal supports UTF-8 (PowerShell usually does)
+- Add `--ascii` to force plain-text glyphs
+- Set `chcp 65001` once per session to switch the codepage to UTF-8
+
+### Paper page shows `n=0` everywhere
+
+Expected on day 1 — paper trades are open but none have closed yet. Tomorrow's EOD step 5/7 runs `reconcile_open_trades` against fresh OHLCV and the numbers populate.
+
+### "Take (paper)" button works but I can't find my trade
+
+The button POSTs to `/api/paper/take`, shows "✓ taken" on success. To see the trade, click **Paper** in the sidebar — open trades appear in the "Open paper trades" table.

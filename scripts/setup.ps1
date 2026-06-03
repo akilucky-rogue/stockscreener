@@ -3,22 +3,37 @@
     QSDE first-time bootstrap (run ONCE on a fresh clone).
 
 .DESCRIPTION
-    Everything `scripts\start.ps1` assumes already exists:
+    Bootstraps everything `scripts\start.ps1` assumes already exists:
       1. Python venv + backend deps (pip install -e ".[dev]")
       2. .env from .env.example (you then paste real, ROTATED keys)
-      3. Docker stack (TimescaleDB + Redis) up
+      3. Docker stack (TimescaleDB + Redis) up + healthy
       4. ALL DB migrations applied (infra/migrations/*.sql, in order)
       5. Frontend node deps (npm install)
-    After this, use scripts\start.ps1 to launch, and scripts\seed.ps1 (or the
-    commands in the run-book) to ingest real data + train.
+      6. Windows Task Scheduler jobs registered:
+           - QSDE_Daily_EOD     (weekdays 15:45 IST)
+           - QSDE_Weekly_Drift  (Sundays  18:00 IST)
+    After this, use scripts\start.ps1 to launch and scripts\seed.ps1 (or
+    the runbook) to ingest real data + train.
 
 .EXAMPLE
     cd qsde
     .\scripts\setup.ps1
+
+.EXAMPLE
+    # Skip frontend npm install (CI / API-only setups):
+    .\scripts\setup.ps1 -SkipFrontend
+
+.EXAMPLE
+    # Skip Task Scheduler registration (manual cron / non-Windows hosts):
+    .\scripts\setup.ps1 -SkipScheduledTasks
 #>
 
 [CmdletBinding()]
-param([switch]$SkipFrontend)
+param(
+    [switch]$SkipFrontend,
+    [switch]$SkipScheduledTasks,
+    [string]$DriftWebhookUrl = ""
+)
 
 $ErrorActionPreference = "Stop"
 $ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -97,13 +112,53 @@ if (-not $SkipFrontend) {
     } else { Warn "Node not found - skipping. Install Node LTS then run 'npm install' in frontend/." }
 }
 
+# 6. Windows Task Scheduler — daily EOD + weekly drift report.
+# Both scripts already exist in scripts/. We just register them so the
+# pipeline runs without manual intervention. Skipping is fine for CI or
+# non-Windows hosts; you can run the wrappers by hand.
+if (-not $SkipScheduledTasks) {
+    Step "Registering Windows Scheduled Tasks"
+    $regDaily  = Join-Path $ScriptDir "..\backend\scripts\register_daily_task.ps1"
+    $regWeekly = Join-Path $ScriptDir "..\backend\scripts\register_weekly_drift_task.ps1"
+
+    if (Test-Path $regDaily) {
+        & powershell -ExecutionPolicy Bypass -File $regDaily 2>&1 | Out-Host
+        if ($LASTEXITCODE -eq 0) { Ok "QSDE_Daily_EOD registered (weekdays 15:45 IST)" }
+        else { Warn "Daily EOD task registration returned non-zero; check the output above" }
+    } else { Warn "register_daily_task.ps1 not found; skipping daily EOD" }
+
+    if (Test-Path $regWeekly) {
+        $weeklyArgs = @("-ExecutionPolicy", "Bypass", "-File", $regWeekly)
+        if ($DriftWebhookUrl -ne "") { $weeklyArgs += @("-Webhook", $DriftWebhookUrl) }
+        & powershell @weeklyArgs 2>&1 | Out-Host
+        if ($LASTEXITCODE -eq 0) { Ok "QSDE_Weekly_Drift registered (Sundays 18:00 IST)" }
+        else { Warn "Weekly drift task registration returned non-zero; check the output above" }
+    } else { Warn "register_weekly_drift_task.ps1 not found; skipping weekly drift" }
+} else {
+    Warn "Skipping Task Scheduler registration (-SkipScheduledTasks). Run by hand later:"
+    Warn "    powershell -ExecutionPolicy Bypass -File backend\scripts\register_daily_task.ps1"
+    Warn "    powershell -ExecutionPolicy Bypass -File backend\scripts\register_weekly_drift_task.ps1"
+}
+
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Green
 Write-Host "  QSDE setup complete." -ForegroundColor Green
 Write-Host "================================================" -ForegroundColor Green
 Write-Host "  Next:"
 Write-Host "    1. Paste ROTATED API keys into qsde\.env"
-Write-Host "    2. Launch:        .\scripts\start.ps1            (backend :8000 + frontend :3000)"
-Write-Host "    3. Ingest+train:  see the run-book (run_ingestion.py -> compute_factors -> run_pipeline.py)"
-Write-Host "    4. Tests:         .\.venv\Scripts\python -m pytest backend/tests -q"
+Write-Host "       (KITE_API_KEY, KITE_API_SECRET, KITE_REDIRECT_URL)"
+Write-Host "    2. Launch:        .\scripts\start.ps1"
+Write-Host "                      backend :8000 + frontend :3000 + Kite live stream"
+Write-Host "    3. Kite login:    open http://127.0.0.1:8000/api/kite/login_url"
+Write-Host "                      (Zerodha access tokens expire daily at ~06:00 IST)"
+Write-Host "    4. First seed:    .\scripts\seed.ps1"
+Write-Host "                      universe -> OHLCV -> factors -> train -> signals"
+Write-Host "    5. Tests:         .\.venv\Scripts\python -m pytest backend\tests -q"
+Write-Host ""
+Write-Host "  Pages once running:"
+Write-Host "    Dashboard         http://localhost:3000"
+Write-Host "    Paper journal     http://localhost:3000/paper"
+Write-Host "    Research          http://localhost:3000/research/<SYMBOL>"
+Write-Host "    Backtest          http://localhost:3000/backtest"
+Write-Host "    API docs          http://localhost:8000/docs"
 Write-Host ""
