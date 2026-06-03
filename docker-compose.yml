@@ -1,0 +1,41 @@
+services:
+  # TimescaleDB (PostgreSQL 16 with time-series extensions)
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: qsde_timescaledb
+    ports:
+      # Host port 5433 -> container 5432. Avoids conflict with a native
+      # Windows PostgreSQL service that owns 0.0.0.0:5432.
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: qsde
+      POSTGRES_PASSWORD: qsde_dev_2026
+      POSTGRES_DB: qsde
+    volumes:
+      - timescale_data:/home/postgres/pgdata/data
+      - ./infra/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qsde"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (signal cache + Celery broker)
+  redis:
+    image: redis:7-alpine
+    container_name: qsde_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  timescale_data:
+  redis_data:

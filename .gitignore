@@ -1,0 +1,59 @@
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# ── Environment & Secrets ─────────────────────────────────────
+.env
+.env.local
+*.pem
+*.key
+
+# ── Data & Cache ──────────────────────────────────────────────
+data/cache/
+data/historical/
+data/models/
+*.parquet
+*.h5
+*.pkl
+*.joblib
+
+# ── Logs ──────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── IDE ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Node.js ───────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.vercel
+
+# ── OS ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── ML Artifacts ──────────────────────────────────────────────
+mlruns/
+models/artifacts/
+*.onnx
+
+# ── Docker ────────────────────────────────────────────────────
+timescale_data/
+redis_data/
+
+.env
+
