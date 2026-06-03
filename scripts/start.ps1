@@ -215,11 +215,10 @@ try {
     if (-not $tokenJson.authenticated) {
         Write-Warn "No active Kite token. Skipping live streamer. Run /api/kite/login_url to re-login, then: powershell .\scripts\start_live_stream.ps1"
     } else {
-        # Single-line -Command form (avoids here-string close-marker fragility).
-        $streamCmd = '$Host.UI.RawUI.WindowTitle = ''QSDE Live Stream''; ' +
-                     "Set-Location '$BackendDir'; " +
-                     "& '$VenvPython' scripts\kite_stream.py"
-        Start-Process powershell -ArgumentList @("-NoExit", "-Command", $streamCmd)
+        # Single inline command, no backticks or string concatenation.
+        $streamTitle  = '$Host.UI.RawUI.WindowTitle = ' + "'QSDE Live Stream'"
+        $streamInline = "$streamTitle; & '$VenvPython' scripts\kite_stream.py"
+        Start-Process -FilePath powershell -WorkingDirectory $BackendDir -ArgumentList @("-NoExit", "-Command", $streamInline)
         Write-Ok "Live tick streamer launched (token expires $($tokenJson.expires_at))"
     }
 } catch {

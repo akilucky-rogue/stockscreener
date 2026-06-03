@@ -22,8 +22,8 @@ if (-not (Test-Path $VenvPython)) {
     exit 1
 }
 
-# Sanity-check token first; otherwise the streamer prints "No active Kite
-# access_token in DB" and exits, which is a confusing failure mode.
+# Sanity-check token first; otherwise the streamer prints a confusing
+# No active Kite access_token error and exits.
 try {
     $st = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/kite/status" -TimeoutSec 5
     if (-not $st.authenticated) {
@@ -33,23 +33,20 @@ try {
     }
     Write-Host "  Token OK (expires $($st.expires_at))" -ForegroundColor DarkGray
 } catch {
-    Write-Host "Backend not responding on :8000 — start it first via .\scripts\start.ps1 -NoFrontend" -ForegroundColor Red
+    Write-Host "Backend not responding on :8000 -- start it first via .\scripts\start.ps1 -NoFrontend" -ForegroundColor Red
     exit 1
 }
 
 $pyArgs = "scripts\kite_stream.py"
 if ($Symbols -ne "") {
-    $pyArgs = "$pyArgs --symbols `"$Symbols`""
+    $pyArgs = "$pyArgs --symbols ""$Symbols"""
 }
 
-# Use a single-line -Command string instead of a here-string. PowerShell's
-# here-string close marker ("@) must be at column 1 with no leading
-# whitespace AND no trailing whitespace; if either drifts (often after
-# a Save-As or CRLF normalization) the whole script blows up before this
-# block even runs. The single-line form is uglier but bullet-proof.
-$cmd = '$Host.UI.RawUI.WindowTitle = ''QSDE Live Stream''; ' +
-       "Set-Location '$BackendDir'; " +
-       "& '$VenvPython' $pyArgs"
+# Spawn the child in a new window. Single inline command, no backticks,
+# no string concatenation, no here-strings. Just the minimum.
+$titleSet = '$Host.UI.RawUI.WindowTitle = ' + "'QSDE Live Stream'"
+$inline = "$titleSet; & '$VenvPython' $pyArgs"
 
-Start-Process powershell -ArgumentList @("-NoExit", "-Command", $cmd)
+Start-Process -FilePath powershell -WorkingDirectory $BackendDir -ArgumentList @("-NoExit", "-Command", $inline)
+
 Write-Host "Streamer launched in new window." -ForegroundColor Green
