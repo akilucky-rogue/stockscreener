@@ -11,7 +11,7 @@
 #   * Registers under the CURRENT user; runs only while you're logged on
 #     (no stored password needed). For a 24/7 box, re-create with
 #     "run whether logged on or not" via Task Scheduler GUI.
-#   * The task does NOT retrain models — it refreshes data + signals off the
+#   * The task does NOT retrain models -- it refreshes data + signals off the
 #     already-promoted models. Retrain (run_pipeline.py) stays manual/weekly.
 #   * Requires an active Kite token at run time (you log in during the day);
 #     if absent, the OHLCV step is skipped and signals refresh on existing data.

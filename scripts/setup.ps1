@@ -112,7 +112,7 @@ if (-not $SkipFrontend) {
     } else { Warn "Node not found - skipping. Install Node LTS then run 'npm install' in frontend/." }
 }
 
-# 6. Windows Task Scheduler — daily EOD + weekly drift report.
+# 6. Windows Task Scheduler -- daily EOD + weekly drift report.
 # Both scripts already exist in scripts/. We just register them so the
 # pipeline runs without manual intervention. Skipping is fine for CI or
 # non-Windows hosts; you can run the wrappers by hand.
@@ -142,7 +142,7 @@ if (-not $SkipScheduledTasks) {
 
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Green
-Write-Host "  QSDE setup complete." -ForegroundColor Green
+Write-Host "  Stoxy setup complete." -ForegroundColor Green
 Write-Host "================================================" -ForegroundColor Green
 Write-Host "  Next:"
 Write-Host "    1. Paste ROTATED API keys into qsde\.env"

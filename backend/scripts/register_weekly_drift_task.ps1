@@ -1,5 +1,5 @@
 # Register (or update) the Windows Scheduled Task that runs the QSDE weekly
-# drift report — every Sunday at 18:00 IST by default.
+# drift report -- every Sunday at 18:00 IST by default.
 #
 # Run ONCE:
 #     powershell -ExecutionPolicy Bypass -File scripts\register_weekly_drift_task.ps1
@@ -11,7 +11,7 @@
 # Notes:
 #   * Registers under the CURRENT user; runs only while you're logged on.
 #   * Exit code from weekly_drift.py = 0/1/2 for keep/shrink/stop. Task
-#     Scheduler History will surface non-zero exits as warnings — that's
+#     Scheduler History will surface non-zero exits as warnings -- that's
 #     intentional, so the OS itself nudges you when drift fires.
 #   * If you pass -Webhook, the URL is stored in the task action; otherwise
 #     the script reads QSDE_DRIFT_WEBHOOK_URL from the env at run time.

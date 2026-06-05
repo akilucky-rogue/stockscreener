@@ -1,4 +1,4 @@
-# QSDE Daily EOD wrapper — activates the venv python, runs the orchestrator,
+# QSDE Daily EOD wrapper -- activates the venv python, runs the orchestrator,
 # and tees all output to a timestamped log under backend\logs\.
 #
 # Invoked by the Windows Scheduled Task (see register_daily_task.ps1), or run

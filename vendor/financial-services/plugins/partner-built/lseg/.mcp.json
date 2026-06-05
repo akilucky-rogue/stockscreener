@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "lseg": {
-      "type": "http",
-      "url": "https://api.analytics.lseg.com/lfa/mcp/server-cl"
-    }
-  }
-}

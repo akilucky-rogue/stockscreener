@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "QSDE — Quantitative Stock Decision Engine",
+  title: "Stoxy -- Quantitative Stock Decision Engine",
   description: "Multi-factor ML signal generation for Indian equities (Nifty 200)",
 };
 
@@ -36,7 +36,7 @@ export default function RootLayout({
         <div className="app-layout">
           <aside className="sidebar">
             <div className="sidebar-logo">
-              QSDE
+              Stoxy
               <span>Quantitative Stock Decision Engine</span>
             </div>
             <nav className="sidebar-nav">

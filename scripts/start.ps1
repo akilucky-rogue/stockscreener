@@ -208,21 +208,20 @@ if (-not $backendUp) { Write-Fail "Backend didn't pass health check in 30s." }
 # -- 4b. Live Kite ticker daemon ----------------------------------------------
 # Starts the WebSocket tick consumer that fills ohlcv_intraday minute bars
 # and emits SSE ticks to the dashboard's intraday chart. Skipped silently if
-# no active Kite token (the daemon would fail anyway — re-login first).
+# no active Kite token (the daemon would fail anyway -- re-login first).
 Write-Step "Starting Kite live tick streamer"
 try {
     $tokenJson = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/kite/status" -TimeoutSec 5 -ErrorAction Stop
     if (-not $tokenJson.authenticated) {
         Write-Warn "No active Kite token. Skipping live streamer. Run /api/kite/login_url to re-login, then: powershell .\scripts\start_live_stream.ps1"
     } else {
-        # Single inline command, no backticks or string concatenation.
-        $streamTitle  = '$Host.UI.RawUI.WindowTitle = ' + "'QSDE Live Stream'"
-        $streamInline = "$streamTitle; & '$VenvPython' scripts\kite_stream.py"
-        Start-Process -FilePath powershell -WorkingDirectory $BackendDir -ArgumentList @("-NoExit", "-Command", $streamInline)
+        # Launch Python directly in its own window. Simpler than wrapping in
+        # PowerShell -Command and avoids string-escaping quirks in PS 5.1.
+        Start-Process -FilePath $VenvPython -ArgumentList "scripts\kite_stream.py" -WorkingDirectory $BackendDir
         Write-Ok "Live tick streamer launched (token expires $($tokenJson.expires_at))"
     }
 } catch {
-    Write-Warn "Couldn't query Kite status — skipping live streamer. Backend may not be fully up."
+    Write-Warn "Couldn't query Kite status -- skipping live streamer. Backend may not be fully up."
 }
 
 # -- 5. Frontend ----------------------------------------------------------
@@ -236,9 +235,10 @@ if (-not $NoFrontend) {
         Start-Sleep -Seconds 1
     }
 
-    # npm.ps1 may be blocked by execution policy; use cmd.exe wrapper.
-    $frontendCmd = "title QSDE Frontend (next) && cd /d `"$FrontendDir`" && `"$NpmCmd`" run dev"
-    Start-Process cmd.exe -ArgumentList "/k", $frontendCmd
+    # Launch npm directly with -WorkingDirectory. Avoids all the
+    # string-escape gymnastics that PS 5.1 keeps choking on. npm.cmd is
+    # a batch file so it opens its own cmd window automatically.
+    Start-Process -FilePath $NpmCmd -ArgumentList @("run", "dev") -WorkingDirectory $FrontendDir
 
     Write-Host "  Waiting for frontend on :3000..." -ForegroundColor DarkGray
     $frontendUp = $false
@@ -267,7 +267,7 @@ if ($Test) {
 # -- 7. Summary -----------------------------------------------------------
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Green
-Write-Host "  QSDE is up." -ForegroundColor Green
+Write-Host "  Stoxy is up." -ForegroundColor Green
 Write-Host "================================================" -ForegroundColor Green
 Write-Host "  Dashboard         http://localhost:3000"
 Write-Host "  Paper journal     http://localhost:3000/paper"

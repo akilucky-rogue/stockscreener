@@ -1,4 +1,4 @@
-# QSDE Weekly Drift wrapper — activates the venv python, runs the report,
+# QSDE Weekly Drift wrapper -- activates the venv python, runs the report,
 # and tees all output to a timestamped log under backend\logs\.
 #
 # Invoked by the Windows Scheduled Task (see register_weekly_drift_task.ps1),
