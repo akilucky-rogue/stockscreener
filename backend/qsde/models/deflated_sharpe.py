@@ -245,8 +245,33 @@ def should_promote(dsr, threshold=None, force=None) -> dict:
     small / synthetic data where DSR can't realistically clear 0.95) — recorded
     as forced=True for the audit trail.
 
+    HARD PAUSE: env QSDE_ML_PROMOTION_ENABLED=false short-circuits and refuses
+    promotion regardless of DSR or force. Used during the Tier 1 rule-engine
+    validation window (target: 30+ paper sessions) so ML and rule strategies
+    can be compared on clean, non-overlapping promotion timelines. The current
+    active model keeps producing signals; only PROMOTIONS are frozen.
+
     Returns {promote, passed, forced, threshold, reason}.
     """
+    # ── Hard pause check (overrides everything, including FORCE_PROMOTE) ──
+    ml_enabled_raw = os.getenv("QSDE_ML_PROMOTION_ENABLED", "true").strip().lower()
+    ml_enabled = ml_enabled_raw in ("1", "true", "yes", "on", "y")
+    if not ml_enabled:
+        # Still compute DSR diagnostic for the audit log — caller may log it.
+        d = float(dsr) if dsr is not None else 0.0
+        return {
+            "promote": False,
+            "passed": False,
+            "forced": False,
+            "paused": True,
+            "threshold": float(threshold) if threshold is not None else DSR_PROMOTION_THRESHOLD,
+            "reason": (
+                f"ML promotion PAUSED (QSDE_ML_PROMOTION_ENABLED={ml_enabled_raw!r}). "
+                f"DSR diagnostic only: {d:.4f}. Active model unchanged. "
+                "Unset or set =true to resume."
+            ),
+        }
+
     if threshold is None:
         try:
             threshold = float(os.getenv("QSDE_DSR_PROMOTION_THRESHOLD", DSR_PROMOTION_THRESHOLD))
@@ -266,4 +291,5 @@ def should_promote(dsr, threshold=None, force=None) -> dict:
     else:
         reason = f"DSR {d:.4f} < {threshold:.2f} -> NOT promoted (active model unchanged)"
     return {"promote": promote, "passed": passed, "forced": forced,
+            "paused": False,
             "threshold": float(threshold), "reason": reason}

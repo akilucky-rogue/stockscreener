@@ -136,6 +136,18 @@ _BASELINE_STRATEGIES = (
     "baseline_random",         # random pick from liquid universe
 )
 
+# Tier 1 rule-based factor strategies (added Phase D, migration 011).
+# tier1_composite is the IC-weighted blend; the per-factor streams (jt, mop,
+# bab, rsi2) are tracked separately so we can DSR each individually and see
+# which factor is actually contributing edge over time.
+_TIER1_STRATEGIES = (
+    "tier1_jt",          # Jegadeesh-Titman 12-1 cross-sectional momentum
+    "tier1_mop",         # Moskowitz-Ooi-Pedersen time-series momentum
+    "tier1_bab",         # Frazzini-Pedersen betting-against-beta
+    "tier1_rsi2",        # Connors-Alvarez RSI(2) mean reversion
+    "tier1_composite",   # IC-weighted blend of the above
+)
+
 
 def _atr_levels(symbol: str, entry: float, horizon: str,
                 direction: int = 1) -> tuple[Optional[float], Optional[float]]:
@@ -292,6 +304,96 @@ def take_baseline_trades(horizon: str = "swing") -> dict:
     return {"ok": True, "horizon": hzn, "as_of": today.isoformat(), "results": out}
 
 
+# ── tier 1 rule-based ───────────────────────────────────────────────
+
+def take_tier1_trades(horizon: str = "swing") -> dict:
+    """Record paper trades from every Tier 1 rule signal for today.
+
+    Tier 1 emits 5 strategy streams per horizon (jt, mop, bab, rsi2,
+    composite). This pulls all of today's signals tagged tier1_* with
+    direction != 0 and is_liquid = TRUE, and writes one paper_trade row
+    per (strategy, symbol).
+
+    Called by daily_eod.py AFTER compute_rule_signals.py has populated
+    the signals table.
+
+    Tier 1 intraday is intentionally empty — daily-bar factors don't
+    produce intraday alpha — so calls with horizon='intraday' return
+    early with `taken=0`.
+    """
+    hzn = horizon.lower().strip()
+    if hzn not in _HORIZON_SESSIONS:
+        return {"ok": False, "error": f"unknown horizon {hzn}"}
+
+    bps = _horizon_cost_bps(hzn, paper_default=True)
+    today = date.today()
+
+    # strategy LIKE 'tier1_%' is more portable than ANY(:array) across
+    # SQLAlchemy/psycopg2 array-binding flavors; the prefix naming convention
+    # ('tier1_jt', 'tier1_composite', ...) gives us a clean filter.
+    sigs = read_sql(
+        """SELECT strategy, symbol, direction, entry_price, target_price,
+                  stop_price, ranking_score, is_liquid
+             FROM signals
+            WHERE horizon = :h
+              AND date    = :d
+              AND strategy LIKE 'tier1\\_%' ESCAPE '\\'
+              AND direction <> 0
+              AND COALESCE(is_liquid, FALSE) = TRUE""",
+        params={"h": hzn, "d": today},
+    )
+
+    out: dict[str, dict] = {strat: {"taken": 0, "errors": []}
+                            for strat in _TIER1_STRATEGIES}
+
+    if sigs.empty:
+        return {"ok": True, "horizon": hzn, "as_of": today.isoformat(),
+                "results": out, "note": "no_tier1_signals"}
+
+    for _, r in sigs.iterrows():
+        strategy = str(r["strategy"])
+        sym = str(r["symbol"])
+        direction = int(r["direction"])
+        entry = float(r["entry_price"]) if pd.notna(r["entry_price"]) else None
+        if entry is None or entry <= 0:
+            out[strategy]["errors"].append(f"{sym}:no_entry_price")
+            continue
+
+        try:
+            execute_sql(
+                """INSERT INTO paper_trades
+                     (symbol, horizon, entry_date, entry_price, direction,
+                      target_price, stop_price, rank_pct, horizon_sessions,
+                      cost_bps, strategy)
+                   VALUES
+                     (%(s)s, %(h)s, %(d)s, %(e)s, %(dir)s, %(t)s, %(st)s, %(rk)s,
+                      %(hs)s, %(c)s, %(strat)s)
+                   ON CONFLICT (strategy, symbol, horizon, entry_date) DO NOTHING""",
+                {
+                    "s": sym, "h": hzn, "d": today, "e": entry, "dir": direction,
+                    "t": (float(r["target_price"])
+                          if pd.notna(r["target_price"]) else None),
+                    "st": (float(r["stop_price"])
+                           if pd.notna(r["stop_price"]) else None),
+                    "rk": (float(r["ranking_score"])
+                           if pd.notna(r["ranking_score"]) else None),
+                    "hs": _HORIZON_SESSIONS[hzn], "c": bps,
+                    "strat": strategy,
+                },
+            )
+            out[strategy]["taken"] += 1
+        except Exception as e:  # noqa: BLE001
+            out[strategy]["errors"].append(f"{sym}:{e}")
+
+    # Clean up empty error lists for friendlier logs.
+    for strategy in out:
+        if not out[strategy]["errors"]:
+            out[strategy]["errors"] = None
+
+    return {"ok": True, "horizon": hzn, "as_of": today.isoformat(),
+            "results": out}
+
+
 # ── reconcile ───────────────────────────────────────────────────────
 
 def _resolve_barrier_daily(prices: pd.DataFrame, entry_price: float,
@@ -427,11 +529,17 @@ def track_record(horizon: Optional[str] = None,
         }
 
     def _strat_split(sub: pd.DataFrame, hzn: Optional[str]) -> dict:
-        """Break out the block by strategy so model vs baselines is visible."""
+        """Break out the block by strategy so model vs baselines vs Tier 1 is visible.
+
+        Order matters in dashboards: model first, then Tier 1 streams (the
+        new contenders), then baselines (the null). This makes the
+        comparison "is the model still beating Tier 1 which is still
+        beating the baselines?" a single left-to-right read.
+        """
         if "strategy" not in sub.columns:
             return {"model": _block(sub, hzn)}
         out: dict[str, dict] = {}
-        for strat in ("model", *_BASELINE_STRATEGIES):
+        for strat in ("model", *_TIER1_STRATEGIES, *_BASELINE_STRATEGIES):
             out[strat] = _block(sub[sub["strategy"] == strat], hzn)
         return out
 

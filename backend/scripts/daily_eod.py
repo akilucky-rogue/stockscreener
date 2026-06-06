@@ -160,13 +160,29 @@ def main() -> None:
     except Exception as e:  # noqa: BLE001
         log.warning("Auto-take failed: %s", e)
 
-    # ── 7. Record baseline paper trades for drift comparison ────────
+    # ── 7. Tier 1 rule-based pipeline (compute + write + take) ──────
+    # Mirrors the ML model path: compute signals from raw OHLCV with the
+    # four rule-based factors, write to signals (tier1_jt, tier1_mop,
+    # tier1_bab, tier1_rsi2, tier1_composite), then enter paper trades.
+    # Runs alongside ML during the validation window so per-strategy
+    # realized stats are comparable. ML promotions are paused via
+    # QSDE_ML_PROMOTION_ENABLED=false during this window — only the
+    # currently-promoted ML model keeps producing signals.
+    _banner("7/8  Tier 1 rule-based pipeline (compute + write + take)")
+    try:
+        from compute_rule_signals import run as run_tier1
+        n_t1 = run_tier1(horizons=["swing", "long"], take_paper_trades=True)
+        log.info("Tier 1 signals written: %d", n_t1)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Tier 1 pipeline failed: %s", e)
+
+    # ── 8. Record baseline paper trades for drift comparison ────────
     # The model can't be evaluated in a vacuum — we need a daily snapshot
     # of "what would buying yesterday's top movers / NIFTY proxy / random
     # picks have done?" so the weekly drift report can answer the only
     # question that matters: "is the ML beating these by enough to deploy
     # real money?"
-    _banner("7/7  Record baseline paper trades (model vs baselines)")
+    _banner("8/8  Record baseline paper trades (model vs baselines vs Tier 1)")
     try:
         from qsde.execution.paper_journal import take_baseline_trades
         for h in ("intraday", "swing", "long"):
