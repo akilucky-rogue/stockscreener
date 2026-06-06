@@ -1,3 +1,9 @@
+# Pin the Compose project name so volumes stay `qsde_timescale_data` and
+# `qsde_redis_data` even after the folder was renamed to stoxsy/. Without
+# this, Compose derives the project name from the cwd (now "stoxsy") and
+# creates fresh empty volumes, orphaning the original DB data.
+name: qsde
+
 services:
   # TimescaleDB (PostgreSQL 16 with time-series extensions)
   timescaledb:
@@ -12,7 +18,12 @@ services:
       POSTGRES_PASSWORD: qsde_dev_2026
       POSTGRES_DB: qsde
     volumes:
-      - timescale_data:/home/postgres/pgdata/data
+      # The TimescaleDB image's default PGDATA is /var/lib/postgresql/data.
+      # An earlier version of this file pointed at /home/postgres/pgdata/data
+      # which is NOT where postgres actually writes, so the named volume sat
+      # empty while data lived only in the container's writable layer --
+      # which evaporated the first time the container was removed.
+      - timescale_data:/var/lib/postgresql/data
       - ./infra/init.sql:/docker-entrypoint-initdb.d/01_init.sql
     restart: unless-stopped
     healthcheck:

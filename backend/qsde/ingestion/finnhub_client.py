@@ -68,6 +68,15 @@ def fetch_company_news(
         log.warning("FINNHUB_API_KEY not configured")
         return pd.DataFrame()
 
+    # Free-tier Finnhub does NOT include /api/v1/company-news; the endpoint
+    # returns 403 "You don't have access to this resource." Until we switch
+    # to a free news provider (Polygon, Alpha Vantage) or buy Finnhub
+    # premium, gate this behind FINNHUB_ENABLED so the seed doesn't spam
+    # warnings for every symbol.
+    import os
+    if os.getenv("FINNHUB_ENABLED", "true").lower() not in ("1", "true", "yes", "y", "on"):
+        return pd.DataFrame()
+
     fh_symbol = f"{symbol.upper()}{exchange_suffix}"
     url = f"{settings.finnhub_base_url}/company-news"
     params = {

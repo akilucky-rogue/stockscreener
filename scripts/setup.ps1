@@ -142,7 +142,7 @@ if (-not $SkipScheduledTasks) {
 
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Green
-Write-Host "  Stoxy setup complete." -ForegroundColor Green
+Write-Host "  Stoxsy setup complete." -ForegroundColor Green
 Write-Host "================================================" -ForegroundColor Green
 Write-Host "  Next:"
 Write-Host "    1. Paste ROTATED API keys into qsde\.env"

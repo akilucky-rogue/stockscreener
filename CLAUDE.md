@@ -29,7 +29,7 @@ yfinance / FMP / FRED / NSE Bhavcopy / NSE Bulk Deals
    qsde/risk/*  (Kelly sizing, portfolio constraints)
          │
          ▼
-   FastAPI /api/*  +  Next.js frontend/  +  Telegram @Stoxybot
+   FastAPI /api/*  +  Next.js frontend/  +  Telegram @Stoxsybot
 ```
 
 ## Conventions

@@ -1,4 +1,4 @@
-# Stoxy -- operations scripts
+# Stoxsy -- operations scripts
 
 PowerShell scripts to bootstrap, start, seed, test, and stop the local stack. Each script is idempotent: re-running is safe and won't double-up data.
 

@@ -1,7 +1,7 @@
 """
 Telegram notification module for QSDE.
 
-Bot: @Stoxybot
+Bot: @Stoxsybot
 Sends signal alerts, kill condition warnings, and system status updates.
 """
 

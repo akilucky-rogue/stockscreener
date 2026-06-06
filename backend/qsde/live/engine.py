@@ -11,7 +11,7 @@ in a background loop that, once per closed minute bar, for each tracked symbol:
            (api/routes/live_signals.py) for the live dashboard,
          • a structured JSON log line   -> always-on audit trail with precise
            timestamps (backtest/headless/debug),
-         • Telegram (@Stoxybot)         -> only on *actionable* changes, so the
+         • Telegram (@Stoxsybot)         -> only on *actionable* changes, so the
            channel isn't spammed every minute.
 
 Decoupling: the loop reads completed bars from the DB rather than tapping the
@@ -92,7 +92,7 @@ def signal_log_line(sig: IntradaySignal) -> str:
 
 
 def build_telegram_alert(sig: IntradaySignal) -> str:
-    """HTML message for @Stoxybot."""
+    """HTML message for @Stoxsybot."""
     arrow = "🟢 BUY" if sig.direction > 0 else "🔴 SELL" if sig.direction < 0 else "⚪ WATCH"
     levels = ""
     if sig.entry is not None and sig.stop is not None and sig.target is not None:

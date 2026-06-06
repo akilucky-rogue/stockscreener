@@ -267,7 +267,7 @@ if ($Test) {
 # -- 7. Summary -----------------------------------------------------------
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Green
-Write-Host "  Stoxy is up." -ForegroundColor Green
+Write-Host "  Stoxsy is up." -ForegroundColor Green
 Write-Host "================================================" -ForegroundColor Green
 Write-Host "  Dashboard         http://localhost:3000"
 Write-Host "  Paper journal     http://localhost:3000/paper"

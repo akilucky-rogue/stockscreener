@@ -52,7 +52,7 @@ from api.routes.paper import router as paper_router
 from api.routes.risk import router as risk_router
 
 app = FastAPI(
-    title="Stoxy -- Quantitative Stock Decision Engine",
+    title="Stoxsy -- Quantitative Stock Decision Engine",
     description="Multi-factor ML signal generation for Indian equities (Nifty 200)",
     version="0.1.0",
     # Scrubs NaN/Inf -> null at the response boundary so individual

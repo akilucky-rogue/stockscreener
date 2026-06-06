@@ -18,7 +18,7 @@ The system is closer to "Day 1 scaffold" than "Phase 0 Day 1-2 complete."
 
 ### Infrastructure (solid)
 - `docker-compose.yml` brings up TimescaleDB (pg16) and Redis 7 with healthchecks. Volumes persistent. Init SQL mounted correctly.
-- `.env` populated with FMP, Finnhub, FRED keys, Choice Equity client ID, and the @Stoxybot Telegram token. `chat_id` is empty (expected — user has to message the bot once to get it).
+- `.env` populated with FMP, Finnhub, FRED keys, Choice Equity client ID, and the @Stoxsybot Telegram token. `chat_id` is empty (expected — user has to message the bot once to get it).
 - `infra/init.sql` (245 lines) creates 12 tables. Two are TimescaleDB hypertables (`ohlcv`, `factor_pit`) with 1-year chunks. Indexes are sensible. Schema is well thought through.
 - `pyproject.toml`, `.gitignore`, `CLAUDE.md` present and reasonable.
 

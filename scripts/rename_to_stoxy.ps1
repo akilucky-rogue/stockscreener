@@ -1,4 +1,4 @@
-# Stoxy rename + cleanup orchestrator.
+# Stoxsy rename + cleanup orchestrator.
 #
 # ONE-SHOT script that:
 #   1. Stops backend, frontend, Kite streamer
@@ -7,18 +7,18 @@
 #      root package.json/lock, qsde/vendor/financial-services/, *.misaligned)
 #   4. Moves loose .md spec docs into qsde/docs/legacy/
 #   5. Moves backend root debug scripts into qsde/backend/scripts/_archive/
-#   6. Renames C:\Users\NEW\Documents\stockscreener\qsde -> C:\Users\NEW\Documents\stockscreener\stoxy
+#   6. Renames C:\Users\NEW\Documents\stockscreener\qsde -> C:\Users\NEW\Documents\stockscreener\Stoxsy
 #   7. Re-registers the Windows Scheduled Tasks with the new paths
 #   8. Updates the local Git remote URL (you must rename the repo on GitHub
 #      manually -- click Settings on https://github.com/Akilucky-rogue/StockScreener
-#      and change name to Stoxy BEFORE running step 8)
+#      and change name to Stoxsy BEFORE running step 8)
 #   9. Force-pushes the current commit to the renamed remote
 #
 # RUN ONCE:
-#     powershell -ExecutionPolicy Bypass -File scripts\rename_to_stoxy.ps1
+#     powershell -ExecutionPolicy Bypass -File scripts\rename_to_Stoxsy.ps1
 #
 # DRY-RUN (no destructive operations):
-#     powershell -ExecutionPolicy Bypass -File scripts\rename_to_stoxy.ps1 -DryRun
+#     powershell -ExecutionPolicy Bypass -File scripts\rename_to_Stoxsy.ps1 -DryRun
 
 param(
     [switch]$DryRun,
@@ -29,7 +29,7 @@ $ErrorActionPreference = "Stop"
 
 $StockscreenerRoot = "C:\Users\NEW\Documents\stockscreener"
 $QsdeRoot          = Join-Path $StockscreenerRoot "qsde"
-$StoxyRoot         = Join-Path $StockscreenerRoot "stoxy"
+$StoxsyRoot         = Join-Path $StockscreenerRoot "Stoxsy"
 $DocumentsRoot     = "C:\Users\NEW\Documents"
 
 function Step($m)  { Write-Host "==> $m" -ForegroundColor Cyan }
@@ -82,7 +82,7 @@ Do-Move (Join-Path $StockscreenerRoot "StockTrack") `
 
 Step "Move legacy out (157 MB)"
 Do-Move (Join-Path $StockscreenerRoot "legacy") `
-        (Join-Path $DocumentsRoot "stoxy_legacy_archive")
+        (Join-Path $DocumentsRoot "Stoxsy_legacy_archive")
 
 # -- 3. Delete cruft ------------------------------------------------------
 Step "Delete root-level cruft (node_modules, .claude*, .swarm, etc.)"
@@ -139,18 +139,18 @@ foreach ($f in @("audit_query.py", "check_indexes.py", "create_active_index.py",
     Do-Move (Join-Path $QsdeRoot "backend\$f") (Join-Path $archive $f)
 }
 
-# -- 6. Rename qsde -> stoxy ----------------------------------------------
-Step "Rename qsde -> stoxy"
+# -- 6. Rename qsde -> Stoxsy ----------------------------------------------
+Step "Rename qsde -> Stoxsy"
 if ($DryRun) {
-    Warn "[DRY-RUN] would rename $QsdeRoot -> $StoxyRoot"
-} elseif (Test-Path $StoxyRoot) {
-    Warn "stoxy folder already exists; skipping rename"
+    Warn "[DRY-RUN] would rename $QsdeRoot -> $StoxsyRoot"
+} elseif (Test-Path $StoxsyRoot) {
+    Warn "Stoxsy folder already exists; skipping rename"
 } else {
-    Rename-Item -Path $QsdeRoot -NewName "stoxy"
-    Ok "renamed qsde -> stoxy"
+    Rename-Item -Path $QsdeRoot -NewName "Stoxsy"
+    Ok "renamed qsde -> Stoxsy"
 }
 
-# Everything after this references $StoxyRoot, not $QsdeRoot.
+# Everything after this references $StoxsyRoot, not $QsdeRoot.
 
 # -- 7. Re-register Windows Scheduled Tasks with new paths ----------------
 Step "Re-register Windows Scheduled Tasks"
@@ -162,8 +162,8 @@ if ($DryRun) {
     Get-ScheduledTask -TaskName "QSDE_Weekly_Drift" -ErrorAction SilentlyContinue |
         Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue
 
-    $regDaily  = Join-Path $StoxyRoot "backend\scripts\register_daily_task.ps1"
-    $regWeekly = Join-Path $StoxyRoot "backend\scripts\register_weekly_drift_task.ps1"
+    $regDaily  = Join-Path $StoxsyRoot "backend\scripts\register_daily_task.ps1"
+    $regWeekly = Join-Path $StoxsyRoot "backend\scripts\register_weekly_drift_task.ps1"
     if (Test-Path $regDaily) {
         & powershell -ExecutionPolicy Bypass -File $regDaily
         Ok "QSDE_Daily_EOD re-registered with new path"
@@ -178,16 +178,16 @@ if ($DryRun) {
 if (-not $SkipGitPush) {
     Step "Git: update remote and push"
     if ($DryRun) {
-        Warn "[DRY-RUN] would: git -C $StoxyRoot remote set-url origin https://github.com/Akilucky-rogue/Stoxy.git ; git push"
-        Warn "         (you must rename the repo on GitHub from StockScreener to Stoxy BEFORE this)"
+        Warn "[DRY-RUN] would: git -C $StoxsyRoot remote set-url origin https://github.com/Akilucky-rogue/Stoxsy.git ; git push"
+        Warn "         (you must rename the repo on GitHub from StockScreener to Stoxsy BEFORE this)"
     } else {
-        Push-Location $StoxyRoot
+        Push-Location $StoxsyRoot
         try {
-            git remote set-url origin "https://github.com/Akilucky-rogue/Stoxy.git" 2>&1 | Out-Host
+            git remote set-url origin "https://github.com/Akilucky-rogue/Stoxsy.git" 2>&1 | Out-Host
             git add -A 2>&1 | Out-Host
-            git commit -m "rename: QSDE -> Stoxy (display + folder)" 2>&1 | Out-Host
+            git commit -m "rename: QSDE -> Stoxsy (display + folder)" 2>&1 | Out-Host
             git push -u origin main --force 2>&1 | Out-Host
-            Ok "pushed to https://github.com/Akilucky-rogue/Stoxy.git"
+            Ok "pushed to https://github.com/Akilucky-rogue/Stoxsy.git"
         } finally {
             Pop-Location
         }
@@ -197,12 +197,12 @@ if (-not $SkipGitPush) {
 # -- 9. Summary -----------------------------------------------------------
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Green
-Write-Host "  Stoxy rename complete." -ForegroundColor Green
+Write-Host "  Stoxsy rename complete." -ForegroundColor Green
 Write-Host "================================================" -ForegroundColor Green
-Write-Host "  Project root: $StoxyRoot"
-Write-Host "  GitHub:       https://github.com/Akilucky-rogue/Stoxy (you must rename the repo on GitHub manually)"
+Write-Host "  Project root: $StoxsyRoot"
+Write-Host "  GitHub:       https://github.com/Akilucky-rogue/Stoxsy (you must rename the repo on GitHub manually)"
 Write-Host "  StockTrack:   C:\Users\NEW\Documents\StockTrack_archive\"
-Write-Host "  Legacy:       C:\Users\NEW\Documents\stoxy_legacy_archive\"
+Write-Host "  Legacy:       C:\Users\NEW\Documents\Stoxsy_legacy_archive\"
 Write-Host ""
-Write-Host "  To start:     cd $StoxyRoot ; .\scripts\start.ps1"
+Write-Host "  To start:     cd $StoxsyRoot ; .\scripts\start.ps1"
 Write-Host ""

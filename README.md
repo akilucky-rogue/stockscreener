@@ -1,6 +1,6 @@
-# Stoxy -- Quantitative Stock Decision Engine
+# Stoxsy -- Quantitative Stock Decision Engine
 
-*Internal codename: qsde. Folder, Python package, DB name, and Docker containers retain `qsde` for stability; user-facing name is Stoxy.*
+*Internal codename: qsde. Folder, Python package, DB name, and Docker containers retain `qsde` for stability; user-facing name is Stoxsy.*
 
 Multi-factor ML signal generation for Indian equities (NSE Nifty 200/500), with a live-validation loop that compares the model against three baseline strategies day by day. Real money never gets sized until paper-trade data proves the model has edge over baselines on net Sharpe.
 
