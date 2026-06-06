@@ -159,13 +159,19 @@ def _attach_realized_returns(
 
     # Forward return per symbol = close.shift(-h) / close - 1, indexed by date.
     fwd_return = close_panel.shift(-h) / close_panel - 1.0 - cost_fraction
-    # Stack into (date, symbol) -> realized_ret_net.
-    fwd_long = (
-        fwd_return.stack(future_stack=True)
-        if hasattr(fwd_return, "stack") and "future_stack" in fwd_return.stack.__doc__
-        else fwd_return.stack(dropna=False)
-    )
-    fwd_long = fwd_long.rename("realized_ret_net").reset_index()
+
+    # Stack into long form (date, symbol) -> realized_ret_net.
+    # Pandas 2.x and 3.0 both accept the no-arg .stack(); the old
+    # future_stack=True kwarg is gone in 3.0 so don't pass it.
+    stacked = fwd_return.stack().rename("realized_ret_net")
+    fwd_long = stacked.reset_index()
+    # After reset_index() the first two columns are the source DataFrame's
+    # index axis name and columns axis name. In production (where the panel
+    # was built via pivot(index='date', columns='symbol')) those are
+    # 'date' and 'symbol'. In tests built via DataFrame(data, index=...)
+    # they're unnamed and pandas falls back to 'level_0', 'level_1'.
+    # Positional rename makes this contract explicit and bug-proof either way.
+    fwd_long.columns = ["date", "symbol", "realized_ret_net"]
     fwd_long["date"] = pd.to_datetime(fwd_long["date"])
 
     merged = sigs.merge(
