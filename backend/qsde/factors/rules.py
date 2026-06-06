@@ -258,8 +258,10 @@ def bab_score(
     if len(close) < window + 1 or len(market_close) < window + 1:
         return pd.Series(np.nan, index=close.index, name="bab_score")
 
-    stock_ret = close.pct_change()
-    mkt_ret = market_close.reindex(close.index).pct_change()
+    # fill_method=None: don't synthesize zero returns on halted/missing
+    # days — let them propagate as NaN and drop out of the beta covariance.
+    stock_ret = close.pct_change(fill_method=None)
+    mkt_ret = market_close.reindex(close.index).pct_change(fill_method=None)
     beta = rolling_beta(stock_ret, mkt_ret, window=window)
     # Higher score = lower beta = stronger long tilt under BAB.
     return (-beta).rename("bab_score")

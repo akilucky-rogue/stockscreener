@@ -243,7 +243,10 @@ def build_benchmark_series(
         log.warning("Benchmark %s has no available constituents in OHLCV panel", index_name)
         return None
     # Equal-weight returns -> reconstruct synthetic level series.
-    rets = close_panel[available].pct_change()
+    # fill_method=None per pandas 3.0 future-proofing: we explicitly do NOT
+    # forward-fill missing prices into fake "no-change" returns; halted/
+    # missing days stay NaN and drop out of the mean.
+    rets = close_panel[available].pct_change(fill_method=None)
     avg_ret = rets.mean(axis=1)
     synth_level = (1.0 + avg_ret.fillna(0)).cumprod() * 100.0
     synth_level.name = f"{index_name}_eq"
