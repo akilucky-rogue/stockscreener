@@ -173,6 +173,11 @@ def main() -> None:
         from compute_rule_signals import run as run_tier1
         n_t1 = run_tier1(horizons=["swing", "long"], take_paper_trades=True)
         log.info("Tier 1 signals written: %d", n_t1)
+        # Roll Tier 1 counts into signals_total so the end-of-EOD no-op check
+        # ("if signals_total == 0: sys.exit(2)") correctly reflects ALL signal
+        # sources, not just ML. Without this, an ML-only outage on a healthy
+        # Tier 1 day would still register as a failed EOD.
+        signals_total += int(n_t1 or 0)
     except Exception as e:  # noqa: BLE001
         log.warning("Tier 1 pipeline failed: %s", e)
 

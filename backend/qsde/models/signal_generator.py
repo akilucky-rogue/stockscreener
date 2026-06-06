@@ -166,19 +166,23 @@ def generate_signals(horizon: Literal["intraday", "swing", "long"] = "swing"):
         adv_20d = adv_map.get(sym)
         is_liquid = bool(adv_20d is not None and adv_20d >= LIQUIDITY_MIN_RUPEES)
 
+        # Migration 011 changed the signals PK to (strategy, symbol, date, horizon)
+        # so multiple strategies can write the same (symbol, date, horizon) row.
+        # ML signals are always tagged strategy='ml'; the ON CONFLICT key must
+        # match the new PK exactly or psycopg2 raises InvalidColumnReference.
         execute_sql(
             """
             INSERT INTO signals (
-                symbol, date, horizon, direction, confidence,
+                strategy, symbol, date, horizon, direction, confidence,
                 predicted_return, ranking_score, top_factors,
                 entry_price, target_price, stop_price, risk_reward,
                 atr_pct, trade_quality, adv_20d, is_liquid
             ) VALUES (
-                %(symbol)s, %(date)s, %(horizon)s, %(direction)s, %(confidence)s,
+                %(strategy)s, %(symbol)s, %(date)s, %(horizon)s, %(direction)s, %(confidence)s,
                 %(predicted_return)s, %(ranking_score)s, %(top_factors)s,
                 %(entry_price)s, %(target_price)s, %(stop_price)s, %(risk_reward)s,
                 %(atr_pct)s, %(trade_quality)s, %(adv_20d)s, %(is_liquid)s
-            ) ON CONFLICT (symbol, date, horizon) DO UPDATE SET
+            ) ON CONFLICT (strategy, symbol, date, horizon) DO UPDATE SET
                 direction = EXCLUDED.direction,
                 confidence = EXCLUDED.confidence,
                 predicted_return = EXCLUDED.predicted_return,
@@ -194,6 +198,7 @@ def generate_signals(horizon: Literal["intraday", "swing", "long"] = "swing"):
                 is_liquid = EXCLUDED.is_liquid
             """,
             {
+                "strategy": "ml",
                 "symbol": sym,
                 "date": today,
                 "horizon": horizon,
