@@ -552,16 +552,23 @@ export default function Dashboard() {
 
                 <div style={{ fontSize: "0.75rem", fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
                   <div style={{ marginBottom: "4px", color: "var(--text-secondary)" }}>Top Factors:</div>
-                  {s.top_factors?.slice(0, 3).map((f: any) => (
-                    <div key={f.name} style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "180px" }}>
-                        {f.name}
-                      </span>
-                      <span style={{ color: f.contribution > 0 ? "var(--accent-green)" : "var(--accent-red)" }}>
-                        {f.contribution > 0 ? "+" : ""}{f.contribution.toFixed(4)}
-                      </span>
-                    </div>
-                  ))}
+                  {/* Defensive: top_factors may be an array (ML/Tier 1 expected shape)
+                      or an object/null on legacy or unrecognized rows. Guard against
+                      both — a single bad row should not crash the dashboard. */}
+                  {(Array.isArray(s.top_factors) ? s.top_factors : []).slice(0, 3).map((f: any) => {
+                    const contribution = Number(f?.contribution);
+                    const safeContribution = Number.isFinite(contribution) ? contribution : 0;
+                    return (
+                      <div key={f?.name ?? Math.random()} style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "180px" }}>
+                          {f?.name ?? "—"}
+                        </span>
+                        <span style={{ color: safeContribution > 0 ? "var(--accent-green)" : "var(--accent-red)" }}>
+                          {safeContribution > 0 ? "+" : ""}{safeContribution.toFixed(4)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Take (paper) — record for the live track record */}

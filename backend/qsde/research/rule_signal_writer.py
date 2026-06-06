@@ -114,14 +114,22 @@ def write_rule_signals(signals_df: pd.DataFrame) -> int:
             horizon=horizon,
         )
 
-        # `top_factors` for ML signals stores SHAP attributions. For Tier 1
-        # we store the score and rank for transparency.
-        top_factors = {
-            "engine": "tier1_rules",
-            "strategy": strategy,
-            "score": ranking_score,
-            "rank_pct": rank_pct,
-        }
+        # `top_factors` for ML signals stores SHAP attributions as
+        #   [{"name": "...", "contribution": <signed float>}, ...]
+        # The dashboard renders this array (slice/map). Tier 1 must use the
+        # SAME array shape — otherwise the page crashes with
+        # "top_factors.slice is not a function" on tier1 rows.
+        #
+        # For Tier 1 we surface:
+        #   - the underlying strategy name with raw score as contribution
+        #   - centered rank_pct (so negative = below median, positive = above)
+        # Both signed, both numeric, both renderable by the existing
+        # dashboard code with zero frontend changes per row type.
+        strategy_short = strategy.replace("tier1_", "")
+        top_factors = [
+            {"name": f"strategy:{strategy_short}", "contribution": ranking_score},
+            {"name": "rank_pct_centered", "contribution": (rank_pct - 0.5) * 2.0},
+        ]
 
         adv_20d = adv_map.get(symbol)
         is_liquid = bool(adv_20d is not None and adv_20d >= LIQUIDITY_MIN_RUPEES)
