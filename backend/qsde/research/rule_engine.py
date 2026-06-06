@@ -386,6 +386,14 @@ def run_for_horizon(
     horizon_str = horizon  # for clarity
     frames: list[pd.DataFrame] = []
 
+    # signals.date is the CALENDAR date the signal is observable, not the
+    # OHLCV bar date. This matches signal_generator.py (ML) so the downstream
+    # paper_journal taker queries `date = today` and finds both ML and Tier 1
+    # rows. On weekends/holidays latest_session lags today by 1-3 days; the
+    # signal still "applies" today even though it was computed off Friday's
+    # close.
+    signal_calendar_date = as_of_date
+
     def _assemble(name: str, scores: pd.Series, strategy: str) -> pd.DataFrame:
         """Build a per-strategy DataFrame with direction + confidence."""
         if scores.empty:
@@ -403,7 +411,7 @@ def run_for_horizon(
         # Confidence: distance from neutral.
         df["confidence"] = (df["rank_pct"] - 0.5).abs() * 2.0  # [0, 1]
         df["strategy"] = strategy
-        df["date"] = latest_session
+        df["date"] = signal_calendar_date
         df["horizon"] = horizon_str
         return df[["strategy", "symbol", "date", "horizon",
                    "score", "rank_pct", "direction", "confidence"]]
