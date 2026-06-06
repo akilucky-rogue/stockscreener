@@ -168,7 +168,7 @@ def main() -> None:
     # realized stats are comparable. ML promotions are paused via
     # QSDE_ML_PROMOTION_ENABLED=false during this window — only the
     # currently-promoted ML model keeps producing signals.
-    _banner("7/8  Tier 1 rule-based pipeline (compute + write + take)")
+    _banner("7/9  Tier 1 rule-based pipeline (compute + write + take)")
     try:
         from compute_rule_signals import run as run_tier1
         n_t1 = run_tier1(horizons=["swing", "long"], take_paper_trades=True)
@@ -181,13 +181,28 @@ def main() -> None:
     except Exception as e:  # noqa: BLE001
         log.warning("Tier 1 pipeline failed: %s", e)
 
-    # ── 8. Record baseline paper trades for drift comparison ────────
+    # ── 8. Tier 1 IC validation — populate rule_factor_ic ───────────
+    # Reads historical signals + OHLCV, computes per-factor rolling IC,
+    # hit rates, and decile-spread Sharpe. Writes one row per
+    # (factor_name, horizon, as_of_date) into rule_factor_ic. The
+    # composite_weight column there is read by rule_engine.load_ic_weights
+    # on TOMORROW's run, so the composite self-tunes over time.
+    # Cold-start safe: all NaN/zero until ~30 sessions of resolved signals.
+    _banner("8/9  Tier 1 IC validation (self-tuning composite weights)")
+    try:
+        from compute_rule_ic import run as run_tier1_ic
+        n_ic = run_tier1_ic()
+        log.info("rule_factor_ic rows written: %d", n_ic)
+    except Exception as e:  # noqa: BLE001
+        log.warning("IC validation failed: %s", e)
+
+    # ── 9. Record baseline paper trades for drift comparison ────────
     # The model can't be evaluated in a vacuum — we need a daily snapshot
     # of "what would buying yesterday's top movers / NIFTY proxy / random
     # picks have done?" so the weekly drift report can answer the only
     # question that matters: "is the ML beating these by enough to deploy
     # real money?"
-    _banner("8/8  Record baseline paper trades (model vs baselines vs Tier 1)")
+    _banner("9/9  Record baseline paper trades (model vs baselines vs Tier 1)")
     try:
         from qsde.execution.paper_journal import take_baseline_trades
         for h in ("intraday", "swing", "long"):
