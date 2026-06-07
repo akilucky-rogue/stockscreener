@@ -148,6 +148,9 @@ export default function PaperLivePage() {
       const container = chartContainerRef.current;
       if (!container) return;
 
+      // lightweight-charts v5 changed the API: addCandlestickSeries() and
+      // addLineSeries() were removed in favor of addSeries(SeriesType, opts).
+      // The series types are now named exports on the module.
       chart = lwc.createChart(container, {
         width: container.clientWidth,
         height: 380,
@@ -163,7 +166,7 @@ export default function PaperLivePage() {
         rightPriceScale: { borderColor: "rgba(255,255,255,0.15)" },
         timeScale:       { borderColor: "rgba(255,255,255,0.15)" },
       });
-      const candleSeries = chart.addCandlestickSeries({
+      const candleSeries = chart.addSeries(lwc.CandlestickSeries, {
         upColor: "#00ff88",
         downColor: "#ff3860",
         wickUpColor: "#00ff88",
@@ -208,7 +211,7 @@ export default function PaperLivePage() {
           rightPriceScale: { borderColor: "rgba(255,255,255,0.12)" },
           timeScale:       { borderColor: "rgba(255,255,255,0.12)" },
         });
-        const benchSeries = benchChart.addLineSeries({
+        const benchSeries = benchChart.addSeries(lwc.LineSeries, {
           color: "#00e5ff",
           lineWidth: 2,
         });
