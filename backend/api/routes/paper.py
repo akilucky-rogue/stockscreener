@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from qsde.db.connection import read_sql
 from qsde.execution.auto_taker import (
@@ -33,6 +33,7 @@ from qsde.execution.paper_journal import (
     take_trade,
     track_record,
 )
+from qsde.execution.paper_live import build_live_payload
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -146,3 +147,20 @@ def paper_trades(
         params=params,
     )
     return {"trades": df.to_dict("records"), "count": len(df)}
+
+
+@router.get("/paper/{trade_id}/live")
+def paper_live(trade_id: int):
+    """Live tracker payload for a single paper trade.
+
+    Returns trade record + stock OHLCV candles since entry + NIFTY 50 EQ
+    benchmark line + derived stats (MFE, MAE, current PnL, vs-benchmark
+    delta, sessions elapsed/remaining) + originating signal's expected
+    return so the page can show 'what we expected vs what's happening'.
+
+    404 if the trade doesn't exist.
+    """
+    payload = build_live_payload(trade_id)
+    if payload is None:
+        raise HTTPException(status_code=404, detail=f"paper trade {trade_id} not found")
+    return payload

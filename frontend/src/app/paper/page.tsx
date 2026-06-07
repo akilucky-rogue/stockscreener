@@ -314,6 +314,7 @@ export default function PaperPage() {
                   <th style={{ padding: "8px 12px" }}>Target</th>
                   <th style={{ padding: "8px 12px" }}>Stop</th>
                   <th style={{ padding: "8px 12px" }}>Dir</th>
+                  <th style={{ padding: "8px 12px" }}>Track</th>
                 </tr>
               </thead>
               <tbody>
@@ -341,6 +342,18 @@ export default function PaperPage() {
                     </td>
                     <td style={{ padding: "8px 12px" }}>
                       {t.direction > 0 ? "🟢 LONG" : "🔴 SHORT"}
+                    </td>
+                    <td style={{ padding: "8px 12px" }}>
+                      <a href={`/paper/${t.id}/live`}
+                         style={{
+                           color: "var(--accent-cyan)", textDecoration: "none",
+                           padding: "3px 8px",
+                           border: "1px solid var(--accent-cyan)",
+                           borderRadius: "var(--radius-sm)",
+                           fontSize: "0.7rem", fontWeight: 600,
+                         }}>
+                        ▸ Live
+                      </a>
                     </td>
                   </tr>
                 ))}
