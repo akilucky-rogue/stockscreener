@@ -119,6 +119,18 @@ def main() -> None:
     except Exception as e:  # noqa: BLE001
         log.exception("Signal generation failed: %s", e)
 
+    # ── 3b. India-native data refresh ──────────────────────────────
+    # MoneyControl + ET RSS news, RBI + MOSPI macro, NSE bhavcopy
+    # ground-truth check. Each source runs independently; one failing
+    # doesn't block the others. Replaces Finnhub/FMP/FRED placeholders.
+    _banner("3b/9  Refresh India-native data (news + macro + ground-truth)")
+    try:
+        from refresh_india_data import run as run_india_data
+        india_summary = run_india_data(["news", "macro", "ground_truth"])
+        log.info("India-data refresh summary: %s", india_summary)
+    except Exception as e:  # noqa: BLE001
+        log.warning("India-data refresh failed (continuing): %s", e)
+
     # ── 4. Universe hygiene ─────────────────────────────────────────
     _banner("4/5  Universe hygiene (deactivate bond/NCD rows)")
     try:

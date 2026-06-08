@@ -1,0 +1,151 @@
+{
+  "as_of": "2026-06-08",
+  "summary": "No closed paper trades yet \u2014 record signals via /api/paper/take to start the live validation loop.",
+  "action": "wait",
+  "horizons": {
+    "intraday": {
+      "vs_backtest": {
+        "rolling_14d": {
+          "n": 0,
+          "hit_rate": null,
+          "avg_net_ret_bps": null,
+          "net_sharpe": null
+        },
+        "backtest_net_sharpe": 0.93,
+        "backtest_hit_band": "0.7-1.0",
+        "drift_flag": false,
+        "drift_reasons": null
+      },
+      "vs_baselines": {
+        "model": {
+          "n": 0,
+          "hit_rate": null,
+          "avg_net_ret_bps": null,
+          "net_sharpe": null
+        },
+        "baselines": {
+          "baseline_top_momentum": {
+            "n": 3,
+            "hit_rate": 0.0,
+            "avg_net_ret_bps": -155.9,
+            "net_sharpe": null
+          },
+          "baseline_nifty": {
+            "n": 5,
+            "hit_rate": 0.0,
+            "avg_net_ret_bps": -164.0,
+            "net_sharpe": null
+          },
+          "baseline_random": {
+            "n": 10,
+            "hit_rate": 0.1,
+            "avg_net_ret_bps": -116.0,
+            "net_sharpe": -27.02
+          }
+        },
+        "edge_over_baselines": false,
+        "issues": null
+      },
+      "recommendation": {
+        "action": "wait",
+        "summary": "Only 0 closed model trades \u2014 need >=15 for a meaningful comparison."
+      }
+    },
+    "swing": {
+      "vs_backtest": {
+        "rolling_14d": {
+          "n": 0,
+          "hit_rate": null,
+          "avg_net_ret_bps": null,
+          "net_sharpe": null
+        },
+        "backtest_net_sharpe": 0.3,
+        "backtest_hit_band": "0.2-0.4",
+        "drift_flag": false,
+        "drift_reasons": null
+      },
+      "vs_baselines": {
+        "model": {
+          "n": 0,
+          "hit_rate": null,
+          "avg_net_ret_bps": null,
+          "net_sharpe": null
+        },
+        "baselines": {
+          "baseline_top_momentum": {
+            "n": 0,
+            "hit_rate": null,
+            "avg_net_ret_bps": null,
+            "net_sharpe": null
+          },
+          "baseline_nifty": {
+            "n": 0,
+            "hit_rate": null,
+            "avg_net_ret_bps": null,
+            "net_sharpe": null
+          },
+          "baseline_random": {
+            "n": 0,
+            "hit_rate": null,
+            "avg_net_ret_bps": null,
+            "net_sharpe": null
+          }
+        },
+        "edge_over_baselines": false,
+        "issues": null
+      },
+      "recommendation": {
+        "action": "wait",
+        "summary": "Only 0 closed model trades \u2014 need >=15 for a meaningful comparison."
+      }
+    },
+    "long": {
+      "vs_backtest": {
+        "rolling_14d": {
+          "n": 0,
+          "hit_rate": null,
+          "avg_net_ret_bps": null,
+          "net_sharpe": null
+        },
+        "backtest_net_sharpe": 0.43,
+        "backtest_hit_band": "0.4-0.5",
+        "drift_flag": false,
+        "drift_reasons": null
+      },
+      "vs_baselines": {
+        "model": {
+          "n": 0,
+          "hit_rate": null,
+          "avg_net_ret_bps": null,
+          "net_sharpe": null
+        },
+        "baselines": {
+          "baseline_top_momentum": {
+            "n": 0,
+            "hit_rate": null,
+            "avg_net_ret_bps": null,
+            "net_sharpe": null
+          },
+          "baseline_nifty": {
+            "n": 0,
+            "hit_rate": null,
+            "avg_net_ret_bps": null,
+            "net_sharpe": null
+          },
+          "baseline_random": {
+            "n": 0,
+            "hit_rate": null,
+            "avg_net_ret_bps": null,
+            "net_sharpe": null
+          }
+        },
+        "edge_over_baselines": false,
+        "issues": null
+      },
+      "recommendation": {
+        "action": "wait",
+        "summary": "Only 0 closed model trades \u2014 need >=15 for a meaningful comparison."
+      }
+    }
+  }
+}
